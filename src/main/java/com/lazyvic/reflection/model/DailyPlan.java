@@ -19,4 +19,20 @@ public class DailyPlan extends BasePlan {
     @ManyToMany(mappedBy = "dailyPlans") // 反向關聯到 User 實體中的 plans
     private Set<User> users = new HashSet<>();
     // Getters and Setters
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public Set<User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(Set<User> users) {
+        this.users = users;
+    }
 }

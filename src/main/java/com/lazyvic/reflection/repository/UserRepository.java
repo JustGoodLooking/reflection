@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface DailyPlanRepository extends JpaRepository<DailyPlan, Long> {
-    Optional<DailyPlan> findByTitle(String title);
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByTelegramId(Long telegramId);
 }
