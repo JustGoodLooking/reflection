@@ -10,7 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class DailyPlanService {
@@ -23,6 +25,7 @@ public class DailyPlanService {
         this.userRepository = userRepository;
         this.dailyPlanRepository = dailyPlanRepository;
     }
+
 
     @Transactional
     public void saveUserPlan(DailyPlanDto dailyPlanDto) {
@@ -57,5 +60,25 @@ public class DailyPlanService {
         // 保存数据到数据库
         userRepository.save(user);
 
+    }
+
+    public User loadUser(Long userTelegramId) {
+        Optional<User> optionalUser = userRepository.findByTelegramId(userTelegramId);
+        if(optionalUser.isPresent()) {
+            return optionalUser.get();
+        }
+        return null;
+    }
+
+
+    @Transactional
+    public Set<DailyPlan> getUserDailyPlans(Long userTelegramId) {
+        Optional<User> optionalUser = userRepository.findByTelegramId(userTelegramId);
+        if (optionalUser.isEmpty()) {
+            return null;
+        }
+        User user = optionalUser.get();
+        Set<DailyPlan> dailyPlans = user.getDailyPlans();
+        return dailyPlans;
     }
 }

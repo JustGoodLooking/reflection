@@ -45,4 +45,12 @@ public abstract class BasePlan {
         this.description = description;
     }
 
+    @Override
+    public String toString() {
+        return "BasePlan{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                '}';
+    }
 }

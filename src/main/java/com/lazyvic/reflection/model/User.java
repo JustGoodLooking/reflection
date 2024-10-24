@@ -29,7 +29,7 @@ public class User {
     )
     private Set<YearlyPlan> yearlyPlans = new HashSet<>();
 
-    @ManyToMany(cascade = CascadeType.ALL) // 自動管理多對多關聯
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER) // 自動管理多對多關聯
     @JoinTable(
             name = "user_daily_plan",
             joinColumns = @JoinColumn(name = "user_id"),

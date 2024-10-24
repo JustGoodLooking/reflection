@@ -1,7 +1,10 @@
 package com.lazyvic.reflection.telegrambot;
 
 import com.lazyvic.reflection.dto.DailyPlanDto;
+import com.lazyvic.reflection.dto.UpdateCallbackQueryDto;
 import com.lazyvic.reflection.dto.UpdateMessageDto;
+import com.lazyvic.reflection.model.DailyPlan;
+import com.lazyvic.reflection.model.User;
 import com.lazyvic.reflection.service.DailyPlanService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -13,6 +16,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class RefectionBot extends TelegramLongPollingBot {
@@ -45,8 +49,8 @@ public class RefectionBot extends TelegramLongPollingBot {
         if (update.hasMessage()) {
             handleMessage(update);
         } else if (update.hasCallbackQuery()) {
-            System.out.println("callbackquery");
-//            handleCallbackQuery(update.getCallbackQuery());
+
+            handleCallbackQuery(update);
         } else {
             System.out.println("unsupported update type");
         }
@@ -65,9 +69,18 @@ public class RefectionBot extends TelegramLongPollingBot {
         replyTest(update);
     }
 
-//    private void handleCallbackQuery(CallbackQuery callbackQuery) {
-//        System.out.println("handle callback");
-//    }
+    private void handleCallbackQuery(Update update) {
+        UpdateCallbackQueryDto updateCallbackQueryDto = UpdateCallbackQueryDto.convert(update);
+        Long userTelegramId = updateCallbackQueryDto.getUserId();
+
+        Set<DailyPlan> dailyPlans = dailyPlanService.getUserDailyPlans(userTelegramId);
+        System.out.println(dailyPlans);
+        System.out.println("handle callback");
+        String formatDailyPlansForTelegram = formatDailyPlansForTelegram(dailyPlans);
+
+
+        replyDailyPlan(update, formatDailyPlansForTelegram);
+    }
 
     private void handleYearLogic(UpdateMessageDto updateMessageDto) {
         // 执行 year 相关的处理逻辑
@@ -76,6 +89,35 @@ public class RefectionBot extends TelegramLongPollingBot {
     private void saveUserPlan(UpdateMessageDto updateMessageDto) {
         DailyPlanDto dailyPlanDto = DailyPlanDto.convert(updateMessageDto);
         dailyPlanService.saveUserPlan(dailyPlanDto);
+    }
+
+    private void replyDailyPlan(Update update, String formatDailyPlansForTelegram) {
+
+        // 创建按钮
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+
+        // 创建一个按钮
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText("Menu ");
+        button.setCallbackData("button_click"); // 设置按钮的回调数据
+
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(button);
+        buttons.add(row);
+        keyboardMarkup.setKeyboard(buttons);
+
+        // 发送消息和按钮
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(update.getCallbackQuery().getMessage().getChatId());
+        sendMessage.setText(formatDailyPlansForTelegram);
+        sendMessage.setReplyMarkup(keyboardMarkup); // 添加按钮到消息中
+
+        try {
+            execute(sendMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void replyTest(Update update) {
@@ -88,7 +130,7 @@ public class RefectionBot extends TelegramLongPollingBot {
 
         // 创建一个按钮
         InlineKeyboardButton button = new InlineKeyboardButton();
-        button.setText("Click Me! ");
+        button.setText("Check Today's Plans ");
         button.setCallbackData("button_click"); // 设置按钮的回调数据
 
         List<InlineKeyboardButton> row = new ArrayList<>();
@@ -99,7 +141,7 @@ public class RefectionBot extends TelegramLongPollingBot {
         // 发送消息和按钮
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(update.getMessage().getChatId().toString());
-        sendMessage.setText("Are you saying:"  + message + "? ");
+        sendMessage.setText("success add plan..");
         sendMessage.setReplyMarkup(keyboardMarkup); // 添加按钮到消息中
 
         try {
@@ -107,6 +149,18 @@ public class RefectionBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public String formatDailyPlansForTelegram(Set<DailyPlan> dailyPlans) {
+        StringBuilder message = new StringBuilder();
+
+        for (DailyPlan dailyPlan : dailyPlans) {
+            message.append("title: ").append(dailyPlan.getTitle()).append("\n");
+            message.append("description: ").append(dailyPlan.getDescription()).append("\n");
+            message.append("--------\n");
+        }
+
+        return message.toString();
     }
 
 
