@@ -9,12 +9,12 @@ import java.time.format.DateTimeFormatter;
 public class DailyPlanDto extends PlanDto{
 
     private String date;
-    public DailyPlanDto(Update update) {
+    public DailyPlanDto(UpdateMessageDto updateMessageDto) {
         super(
-                update.getMessage().getFrom().getId(),
-                update.getMessage().getText(),
-                "description",
-                update.getMessage().getFrom().getFirstName()
+                updateMessageDto.getUserId(),
+                updateMessageDto.parseMessage().getTitle(),
+                updateMessageDto.parseMessage().getDescription(),
+                updateMessageDto.getUserName()
                 );
         this.date = getCurrentDate();
 
@@ -24,8 +24,8 @@ public class DailyPlanDto extends PlanDto{
         return date;
     }
 
-    public static DailyPlanDto convert(Update update) {
-        return new DailyPlanDto(update);
+    public static DailyPlanDto convert(UpdateMessageDto updateMessageDto) {
+        return new DailyPlanDto(updateMessageDto);
     }
 
     private String getCurrentDate() {

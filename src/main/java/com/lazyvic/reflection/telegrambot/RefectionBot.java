@@ -1,6 +1,7 @@
 package com.lazyvic.reflection.telegrambot;
 
 import com.lazyvic.reflection.dto.DailyPlanDto;
+import com.lazyvic.reflection.dto.UpdateMessageDto;
 import com.lazyvic.reflection.service.DailyPlanService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -40,15 +41,41 @@ public class RefectionBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        System.out.println(update.getMessage());
-        DailyPlanDto dailyPlanDto = DailyPlanDto.convert(update);
+        System.out.println("update +" +update);
         if (update.hasMessage()) {
-            dailyPlanService.saveUserPlan(dailyPlanDto);
-            // save to user
-            // save to daily
-            replyTest(update);
-
+            handleMessage(update);
+        } else if (update.hasCallbackQuery()) {
+            System.out.println("callbackquery");
+//            handleCallbackQuery(update.getCallbackQuery());
+        } else {
+            System.out.println("unsupported update type");
         }
+    }
+
+    private void handleMessage(Update update) {
+        UpdateMessageDto updateMessageDto = UpdateMessageDto.convert(update);
+        List<String> params = updateMessageDto.parseMessage().getParameters();
+
+        if (params.stream().anyMatch(param -> param.equalsIgnoreCase("year"))) {
+            handleYearLogic(updateMessageDto);
+        } else {
+            saveUserPlan(updateMessageDto);
+        }
+
+        replyTest(update);
+    }
+
+//    private void handleCallbackQuery(CallbackQuery callbackQuery) {
+//        System.out.println("handle callback");
+//    }
+
+    private void handleYearLogic(UpdateMessageDto updateMessageDto) {
+        // 执行 year 相关的处理逻辑
+    }
+
+    private void saveUserPlan(UpdateMessageDto updateMessageDto) {
+        DailyPlanDto dailyPlanDto = DailyPlanDto.convert(updateMessageDto);
+        dailyPlanService.saveUserPlan(dailyPlanDto);
     }
 
     private void replyTest(Update update) {

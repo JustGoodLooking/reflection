@@ -1,5 +1,7 @@
 package com.lazyvic.reflection.dto;
 
+import org.telegram.telegrambots.meta.api.objects.Update;
+
 public class PlanDto {
     private Long telegramId;
     private String name;
