@@ -19,11 +19,13 @@ public class DailyPlanService {
 
     private UserRepository userRepository;
     private DailyPlanRepository dailyPlanRepository;
+    private RedisService redisService;
 
     @Autowired
-    public DailyPlanService(UserRepository userRepository, DailyPlanRepository dailyPlanRepository) {
+    public DailyPlanService(UserRepository userRepository, DailyPlanRepository dailyPlanRepository, RedisService redisService) {
         this.userRepository = userRepository;
         this.dailyPlanRepository = dailyPlanRepository;
+        this.redisService = redisService;
     }
 
 
@@ -71,6 +73,8 @@ public class DailyPlanService {
     }
 
     public List<DailyPlan> getUserDailyPlansByJPQL(Long userTelegramId) {
+        System.out.println("update test");
+        this.redisService.testSetGet();
         return dailyPlanRepository.findDailyPlanByTelegramId(userTelegramId);
     }
 
