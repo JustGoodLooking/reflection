@@ -70,6 +70,10 @@ public class DailyPlanService {
         return null;
     }
 
+    public List<DailyPlan> getUserDailyPlansByJPQL(Long userTelegramId) {
+        return dailyPlanRepository.findDailyPlanByTelegramId(userTelegramId);
+    }
+
 
     @Transactional
     public Set<DailyPlan> getUserDailyPlans(Long userTelegramId) {
@@ -78,7 +82,6 @@ public class DailyPlanService {
             return null;
         }
         User user = optionalUser.get();
-        Set<DailyPlan> dailyPlans = user.getDailyPlans();
-        return dailyPlans;
+        return user.getDailyPlans();
     }
 }

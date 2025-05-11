@@ -5,6 +5,8 @@ import com.lazyvic.reflection.dto.UpdateCallbackQueryDto;
 import com.lazyvic.reflection.dto.UpdateMessageDto;
 import com.lazyvic.reflection.model.DailyPlan;
 import com.lazyvic.reflection.model.User;
+import com.lazyvic.reflection.model.YearlyPlan;
+import com.lazyvic.reflection.repository.DailyPlanRepository;
 import com.lazyvic.reflection.service.DailyPlanService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,9 +30,12 @@ public class RefectionBot extends TelegramLongPollingBot {
     private String botUsername;
 
     private DailyPlanService dailyPlanService;
+    private final DailyPlanRepository dailyPlanRepository;
 
-    public RefectionBot(DailyPlanService dailyPlanService) {
+    public RefectionBot(DailyPlanService dailyPlanService,
+                        DailyPlanRepository dailyPlanRepository) {
         this.dailyPlanService = dailyPlanService;
+        this.dailyPlanRepository = dailyPlanRepository;
     }
 
 
@@ -45,7 +51,7 @@ public class RefectionBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        System.out.println("update +" +update);
+        System.out.println("update +" + update);
         if (update.hasMessage()) {
             handleMessage(update);
         } else if (update.hasCallbackQuery()) {
@@ -72,10 +78,8 @@ public class RefectionBot extends TelegramLongPollingBot {
     private void handleCallbackQuery(Update update) {
         UpdateCallbackQueryDto updateCallbackQueryDto = UpdateCallbackQueryDto.convert(update);
         Long userTelegramId = updateCallbackQueryDto.getUserId();
+        List<DailyPlan> dailyPlans = dailyPlanService.getUserDailyPlansByJPQL(userTelegramId);
 
-        Set<DailyPlan> dailyPlans = dailyPlanService.getUserDailyPlans(userTelegramId);
-        System.out.println(dailyPlans);
-        System.out.println("handle callback");
         String formatDailyPlansForTelegram = formatDailyPlansForTelegram(dailyPlans);
 
 
@@ -83,6 +87,9 @@ public class RefectionBot extends TelegramLongPollingBot {
     }
 
     private void handleYearLogic(UpdateMessageDto updateMessageDto) {
+        System.out.println("save year plan");
+
+
         // 执行 year 相关的处理逻辑
     }
 
@@ -141,7 +148,7 @@ public class RefectionBot extends TelegramLongPollingBot {
         // 发送消息和按钮
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(update.getMessage().getChatId().toString());
-        sendMessage.setText("success add plan..");
+        sendMessage.setText("success add plan.. test just reply");
         sendMessage.setReplyMarkup(keyboardMarkup); // 添加按钮到消息中
 
         try {
@@ -151,7 +158,7 @@ public class RefectionBot extends TelegramLongPollingBot {
         }
     }
 
-    public String formatDailyPlansForTelegram(Set<DailyPlan> dailyPlans) {
+    public String formatDailyPlansForTelegram(List<DailyPlan> dailyPlans) {
         StringBuilder message = new StringBuilder();
 
         for (DailyPlan dailyPlan : dailyPlans) {
@@ -161,6 +168,17 @@ public class RefectionBot extends TelegramLongPollingBot {
         }
 
         return message.toString();
+    }
+
+    public void sendMessageToUser(Long chatId, String message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId.toString());
+        sendMessage.setText(message);
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
 
