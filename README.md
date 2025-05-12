@@ -1,17 +1,43 @@
-# Telegram Chat Data Access Bot (Java + Docker)
+# 📚 Reflection - Telegram Bot for Daily & Yearly Planning
 
-This is a simple chatbot project built with Java that allows users to read and write data through a Telegram chat interface. The project is containerized using Docker for easy deployment.
+A personal Telegram bot built with Spring Boot, PostgreSQL, Redis, and Docker to help users manage daily and yearly tasks. This project is designed as a **system design practice** and gradually implements architecture patterns like async processing, caching, rate limiting, and scheduled reminders.
+
+---
 
 ## ✨ Features
 
-- Uses the Telegram Bot API to receive and respond to messages
-- Supports storing, and displaying data via chat
-- Data is persisted in a customizable database (e.g., MySQL, MongoDB)
-- Dockerized for quick setup and deployment
+- ✅ Add / view daily and yearly plans via Telegram
+- ✅ PostgreSQL schema for user-task management
+- ✅ Redis integration (cache, rate limit, deduplication)
+- ✅ Scheduled daily reminder via `@Scheduled`
+- 🕒 Async processing with RabbitMQ (optional stage)
+- 📊 System observability with Prometheus + Grafana (planned)
+- 🐳 Docker-based local development
 
-## 🧰 Tech Stack
+---
 
-- Java 11+
-- Spring Boot (if applicable)
-- Telegram Bots Java SDK
-- Docker / Docker Compose
+## 📦 Tech Stack
+
+- **Backend**: Spring Boot (Java)
+- **Database**: PostgreSQL
+- **Cache / Rate Limiting**: Redis
+- **Queue**: RabbitMQ (for decoupling logs / messages)
+- **Infrastructure**: Docker + Docker Compose
+- **Monitoring**: Prometheus / Grafana (future)
+
+## 🛣️ System Design Roadmap
+
+This project grows by design — each phase adds real-world architecture layers. The focus is not just features, but **how to build them well**.
+
+| Phase | Goal | Tech Stack | Redis Usage | Redis Tips |
+|-------|------|------------|--------------|------------|
+| **Phase 1** | Basic CRUD: Telegram → Spring → PostgreSQL | Spring Boot, PostgreSQL | Not used | Keep it simple for MVP debugging |
+| **Phase 2** | Daily reminders | `@Scheduled` + DB query | `reminder:userId:2025-05-12` for deduplication | Use `SET NX EX` to prevent duplicates |
+| **Phase 3** | Cache + Rate limiting | Redis TTL, ZSet, counter | `dailyPlan:userId:date`, `user:{id}:cmd_count` | Consider warm-up cache; fallback on limit fail |
+| **Phase 3.5** | Async message processing | RabbitMQ + JSON tasks | Optional: use Redis for locking / tracking | Add idempotent check in consumer |
+| **Phase 4** | Multi-step user input | Redis + simple FSM | `user:123:step`, `user:123:data` | Handle TTL expiry gracefully |
+| **Phase 5** | Async logging system | RabbitMQ → MongoDB (or file) | Redis as temp buffer `logs:tmp:{timestamp}` | Set TTL, Redis not for permanent logs |
+| **Phase 6** | Observability (metrics, health) | Prometheus + Grafana | HINCRBY for `metrics:user:actions` | Prune metrics; use sampling if needed |
+| **Phase 7** | Cloud deploy & CI/CD | GitHub Actions, EC2, RDS | Track build/deploy status via Redis | Set short TTL to avoid stale data |
+
+Each phase simulates real backend design decisions: queueing, deduplication, session state, logging separation, etc.
