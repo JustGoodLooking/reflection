@@ -24,7 +24,7 @@ public class RedisService {
     }
 
     public boolean shouldRemind(Long userId, String tag) {
-        String key = "remind: " + tag + ":" + userId + ":" + LocalDate.now();
+        String key = "remind:" + tag + ":" + userId + ":" + LocalDate.now();
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
             logger.info("already has key, skip..");
             return false;
