@@ -25,12 +25,15 @@ public class RedisService {
 
     public boolean shouldRemind(Long userId, String tag) {
         String key = "remind:" + tag + ":" + userId + ":" + LocalDate.now();
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-            logger.info("already has key, skip..");
+        // 原子操作：只有當 key 不存在時才會設值成功
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofHours(24));
+
+        if (Boolean.TRUE.equals(success)) {
+            logger.info("Set reminder key [{}] successfully, will proceed to push message.", key);
+            return true;
+        } else {
+            logger.info("Reminder key [{}] already exists, skip pushing message.", key);
             return false;
         }
-        logger.info("set key for today's reminder....");
-        redisTemplate.opsForValue().set(key, "1", Duration.ofHours(24));
-        return true;
     }
 }

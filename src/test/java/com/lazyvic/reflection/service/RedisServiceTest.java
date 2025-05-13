@@ -39,22 +39,20 @@ class RedisServiceTest {
     @Test
     void shouldReturnFalseWhenKeyExists() {
         String expectedKey = "remind:daily:123:" + LocalDate.now();
-        when(redisTemplate.hasKey(expectedKey)).thenReturn(true);
-
+        when(valueOperations.setIfAbsent(expectedKey, "1", Duration.ofHours(24))).thenReturn(false);
         boolean result = redisService.shouldRemind(123L, "daily");
 
         assertFalse(result);
-        verify(redisTemplate, never()).opsForValue();
+        verify(valueOperations).setIfAbsent(eq(expectedKey), eq("1"), eq(Duration.ofHours(24)));
     }
 
     @Test
     void shouldReturnTrueAndSetKeyWhenKeyNotExists() {
         String expectedKey = "remind:daily:123:" + LocalDate.now();
-        when(redisTemplate.hasKey(expectedKey)).thenReturn(false);
-
+        when(valueOperations.setIfAbsent(expectedKey, "1", Duration.ofHours(24))).thenReturn(true);
         boolean result = redisService.shouldRemind(123L, "daily");
 
         assertTrue(result);
-        verify(valueOperations).set(eq(expectedKey), eq("1"), eq(Duration.ofHours(24)));
+        verify(valueOperations).setIfAbsent(eq(expectedKey), eq("1"), eq(Duration.ofHours(24)));
     }
 }

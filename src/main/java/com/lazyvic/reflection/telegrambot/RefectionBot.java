@@ -4,8 +4,6 @@ import com.lazyvic.reflection.dto.DailyPlanDto;
 import com.lazyvic.reflection.dto.UpdateCallbackQueryDto;
 import com.lazyvic.reflection.dto.UpdateMessageDto;
 import com.lazyvic.reflection.model.DailyPlan;
-import com.lazyvic.reflection.model.User;
-import com.lazyvic.reflection.model.YearlyPlan;
 import com.lazyvic.reflection.repository.DailyPlanRepository;
 import com.lazyvic.reflection.service.DailyPlanService;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +17,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Component
 public class RefectionBot extends TelegramLongPollingBot {
