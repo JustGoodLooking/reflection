@@ -52,7 +52,6 @@ public class RefectionBot extends TelegramLongPollingBot {
         if (update.hasMessage()) {
             handleMessage(update);
         } else if (update.hasCallbackQuery()) {
-
             handleCallbackQuery(update);
         } else {
             System.out.println("unsupported update type");
@@ -66,10 +65,11 @@ public class RefectionBot extends TelegramLongPollingBot {
         if (params.stream().anyMatch(param -> param.equalsIgnoreCase("year"))) {
             handleYearLogic(updateMessageDto);
         } else {
-            saveUserPlan(updateMessageDto);
+            boolean handleDailyLogicResult = handleDailyLogic(updateMessageDto);
+            replyAddPlan(update, handleDailyLogicResult);
         }
 
-        replyTest(update);
+
     }
 
     private void handleCallbackQuery(Update update) {
@@ -85,14 +85,12 @@ public class RefectionBot extends TelegramLongPollingBot {
 
     private void handleYearLogic(UpdateMessageDto updateMessageDto) {
         System.out.println("save year plan");
-
-
-        // 执行 year 相关的处理逻辑
     }
 
-    private void saveUserPlan(UpdateMessageDto updateMessageDto) {
+    private boolean handleDailyLogic(UpdateMessageDto updateMessageDto) {
         DailyPlanDto dailyPlanDto = DailyPlanDto.convert(updateMessageDto);
-        dailyPlanService.saveUserPlan(dailyPlanDto);
+        return dailyPlanService.trySaveUserPlan(dailyPlanDto);
+
     }
 
     private void replyDailyPlan(Update update, String formatDailyPlansForTelegram) {
@@ -124,15 +122,14 @@ public class RefectionBot extends TelegramLongPollingBot {
         }
     }
 
-    private void replyTest(Update update) {
-        String message = update.getMessage().getText();
-        System.out.println("Received message: " + message);
+    private void replyAddPlan(Update update, boolean handlePlanResult) {
+        String buttonText = getButtonText(handlePlanResult);
 
-        // 创建按钮
+
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
-        // 创建一个按钮
+
         InlineKeyboardButton button = new InlineKeyboardButton();
         button.setText("Check Today's Plans ");
         button.setCallbackData("button_click"); // 设置按钮的回调数据
@@ -145,7 +142,7 @@ public class RefectionBot extends TelegramLongPollingBot {
         // 发送消息和按钮
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(update.getMessage().getChatId().toString());
-        sendMessage.setText("success add plan.. test just reply");
+        sendMessage.setText(buttonText);
         sendMessage.setReplyMarkup(keyboardMarkup); // 添加按钮到消息中
 
         try {
@@ -176,6 +173,13 @@ public class RefectionBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    private String getButtonText(boolean savePlanResult) {
+        if (!savePlanResult) {
+            return "too many time, try to take a rest...";
+        }
+        return "success add plan..";
     }
 
 

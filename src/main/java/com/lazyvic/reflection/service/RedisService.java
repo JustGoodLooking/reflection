@@ -17,12 +17,6 @@ public class RedisService {
         this.redisTemplate = redisTemplate;
     }
 
-    public void testSetGet() {
-        redisTemplate.opsForValue().set("testKey", "testValue");
-        String value = redisTemplate.opsForValue().get("testKey");
-        System.out.println("Redis testKey = " + value);
-    }
-
     public boolean shouldRemind(Long userId, String tag) {
         String key = "remind:" + tag + ":" + userId + ":" + LocalDate.now();
         // 原子操作：只有當 key 不存在時才會設值成功
@@ -36,4 +30,15 @@ public class RedisService {
             return false;
         }
     }
+
+    public boolean allowAdd(String action, Long userId, int maxPerMinute) {
+        String key = String.format("ratelimit:%s:%d", action, userId);
+        Long count = redisTemplate.opsForValue().increment(key);
+        if (count == 1) {
+            redisTemplate.expire(key, Duration.ofMinutes(1));
+        }
+        return count <= maxPerMinute;
+    }
+
+
 }

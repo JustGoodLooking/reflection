@@ -20,7 +20,7 @@ public class DailyPlanScheduler {
         this.redisService = redisService;
         this.refectionBot = refectionBot;
     }
-    @Scheduled(cron = "*/5 * * * * ?")
+    @Scheduled(cron = "5 * * * * ?")
     public void sendDailyPlansReminders() {
         if (!redisService.shouldRemind(6653324577L, "daily")) {
             return;

@@ -1,8 +1,12 @@
 package com.lazyvic.reflection.dto;
 
-import org.telegram.telegrambots.meta.api.objects.Update;
+import java.io.Serial;
+import java.io.Serializable;
 
-public class PlanDto {
+public class PlanDto implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private Long telegramId;
     private String name;
     private String title;

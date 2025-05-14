@@ -6,6 +6,9 @@ import com.lazyvic.reflection.model.DailyPlan;
 import com.lazyvic.reflection.model.User;
 import com.lazyvic.reflection.repository.DailyPlanRepository;
 import com.lazyvic.reflection.repository.UserRepository;
+import com.lazyvic.reflection.scheduler.DailyPlanScheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +19,8 @@ import java.util.Set;
 
 @Service
 public class DailyPlanService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DailyPlanService.class);
 
     private UserRepository userRepository;
     private DailyPlanRepository dailyPlanRepository;
@@ -30,7 +35,17 @@ public class DailyPlanService {
 
 
     @Transactional
-    public void saveUserPlan(DailyPlanDto dailyPlanDto) {
+    public boolean trySaveUserPlan(DailyPlanDto dailyPlanDto) {
+        if (!redisService.allowAdd("addPlan", dailyPlanDto.getTelegramId(), 3)) {
+            logger.warn("LIMIT!：user {} exceeded the allowed frequency to add plan ", dailyPlanDto.getTelegramId());
+            return false;
+        }
+        saveUserPlan(dailyPlanDto);
+        return true;
+    }
+
+
+    private void saveUserPlan(DailyPlanDto dailyPlanDto) {
         // 查找用户
         Optional<User> optionalUser = userRepository.findByTelegramId(dailyPlanDto.getTelegramId());
         User user;
@@ -73,8 +88,6 @@ public class DailyPlanService {
     }
 
     public List<DailyPlan> getUserDailyPlansByJPQL(Long userTelegramId) {
-        System.out.println("update test");
-        this.redisService.testSetGet();
         return dailyPlanRepository.findDailyPlanByTelegramId(userTelegramId);
     }
 
