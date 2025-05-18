@@ -3,6 +3,8 @@ package com.lazyvic.reflection.telegrambot;
 import com.lazyvic.reflection.dto.DailyPlanDto;
 import com.lazyvic.reflection.dto.UpdateCallbackQueryDto;
 import com.lazyvic.reflection.dto.UpdateMessageDto;
+import com.lazyvic.reflection.events.model.UserActionEvent;
+import com.lazyvic.reflection.events.producer.UserActionEventProducer;
 import com.lazyvic.reflection.model.DailyPlan;
 import com.lazyvic.reflection.repository.DailyPlanRepository;
 import com.lazyvic.reflection.service.DailyPlanService;
@@ -20,6 +22,8 @@ import java.util.List;
 
 @Component
 public class RefectionBot extends TelegramLongPollingBot {
+    private static final String DAILY = "Daily";
+
     @Value("${telegram.bot.token}")
     private String botToken;
 
@@ -28,11 +32,14 @@ public class RefectionBot extends TelegramLongPollingBot {
 
     private DailyPlanService dailyPlanService;
     private final DailyPlanRepository dailyPlanRepository;
+    private UserActionEventProducer userActionEventProducer;
 
     public RefectionBot(DailyPlanService dailyPlanService,
-                        DailyPlanRepository dailyPlanRepository) {
+                        DailyPlanRepository dailyPlanRepository,
+                        UserActionEventProducer userActionEventProducer) {
         this.dailyPlanService = dailyPlanService;
         this.dailyPlanRepository = dailyPlanRepository;
+        this.userActionEventProducer = userActionEventProducer;
     }
 
 
@@ -48,7 +55,7 @@ public class RefectionBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        System.out.println("update +" + update);
+        // handle message
         if (update.hasMessage()) {
             handleMessage(update);
         } else if (update.hasCallbackQuery()) {
@@ -58,18 +65,33 @@ public class RefectionBot extends TelegramLongPollingBot {
         }
     }
 
+
+
     private void handleMessage(Update update) {
         UpdateMessageDto updateMessageDto = UpdateMessageDto.convert(update);
         List<String> params = updateMessageDto.parseMessage().getParameters();
 
         if (params.stream().anyMatch(param -> param.equalsIgnoreCase("year"))) {
             handleYearLogic(updateMessageDto);
-        } else {
-            boolean handleDailyLogicResult = handleDailyLogic(updateMessageDto);
-            replyAddPlan(update, handleDailyLogicResult);
+            return;
         }
+        boolean handleDailyLogicResult = handleDailyLogic(updateMessageDto);
+        if (handleDailyLogicResult) {
+            publishUserActionEvent(updateMessageDto);
+        }
+        replyAddPlan(update, handleDailyLogicResult);
+        
 
 
+    }
+
+    private void publishUserActionEvent(UpdateMessageDto updateMessageDto) {
+        UserActionEvent event = new UserActionEvent(
+                updateMessageDto.getUserId(),
+                DAILY,
+                updateMessageDto.getTextMessage()
+        );
+        userActionEventProducer.send(event);
     }
 
     private void handleCallbackQuery(Update update) {
@@ -180,6 +202,21 @@ public class RefectionBot extends TelegramLongPollingBot {
             return "too many time, try to take a rest...";
         }
         return "success add plan..";
+    }
+
+    private void userActionEvent() {
+        
+    }
+
+    private void eventTest() {
+        // test event
+        int x = 0;
+        while (x < 10) {
+            String message = "test rabbit #" + x;
+            UserActionEvent uae = new UserActionEvent(123L, "/add", message);
+            userActionEventProducer.send(uae);
+            x++;
+        }
     }
 
 

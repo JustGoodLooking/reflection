@@ -55,4 +55,16 @@ class RedisServiceTest {
         assertTrue(result);
         verify(valueOperations).setIfAbsent(eq(expectedKey), eq("1"), eq(Duration.ofHours(24)));
     }
+
+
+    @Test
+    void shouldAllowWhenCountIsBelowLimit() {
+        String key = "ratelimit:add:123";
+        when(valueOperations.increment(key)).thenReturn(1L);
+
+        boolean allowed = redisService.allowAdd("add", 123L, 3);
+
+        assertTrue(allowed);
+        verify(redisTemplate).expire(eq(key), eq(Duration.ofMinutes(1)));
+    }
 }

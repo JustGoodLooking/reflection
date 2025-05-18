@@ -25,6 +25,16 @@ services:
     environment:
       SPRING_REDIS_HOST: redis
 
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"       # 給應用程式連線
+      - "15672:15672"     # 管理介面（Web UI）
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
 
   spring-app:
     build: .
