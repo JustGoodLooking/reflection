@@ -21,10 +21,11 @@ public class TelegramBotInitializer {
     @EventListener({ContextRefreshedEvent.class})
     public void init() {
         try {
-            telegramBot.execute(new DeleteWebhook());
+
 
             TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
             telegramBotsApi.registerBot(telegramBot);
+            telegramBot.execute(new DeleteWebhook());
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
