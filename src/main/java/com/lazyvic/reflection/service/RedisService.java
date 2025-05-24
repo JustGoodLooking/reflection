@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class RedisService {
@@ -38,6 +39,44 @@ public class RedisService {
             redisTemplate.expire(key, Duration.ofMinutes(1));
         }
         return count <= maxPerMinute;
+    }
+
+    public boolean isNewsAlreadySent(Long userId, String link) {
+        String key = "rss:sent:" + userId + ":" + hash(link);
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
+
+    public void markNewsAsSent(Long userId, String link) {
+        String key = "rss:sent:" + userId + ":" + hash(link);
+        redisTemplate.opsForValue().set(key, "1", Duration.ofDays(2)); // TTL 2 天
+    }
+
+    public boolean isAskCooldownActive(Long userId) {
+        String key = "rss:ask:" + userId;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
+
+    public void activateAskCoolDown(Long userId) {
+        String key = "rss:ask:" + userId;
+        redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofSeconds(30));
+    }
+
+    public long getCooldownRemainingSeconds(Long userId) {
+        String key = "rss:ask:" + userId;
+        Long seconds = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+        return (seconds != null && seconds > 0) ? seconds : 0;
+    }
+
+    public String getCachedRssString(String key) {
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    public void cacheRssString(String key, String value, int seconds) {
+        redisTemplate.opsForValue().set(key, value, Duration.ofSeconds(seconds));
+    }
+
+    private String hash(String input) {
+        return Integer.toHexString(input.hashCode());
     }
 
 

@@ -8,9 +8,11 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMqConfig {
-    public static final String EXCHANGE_NAME = "user.event.exchange";
+    public static final String EVENT_EXCHANGE_NAME = "user.event.exchange";
+    public static final String RSS_EXCHANGE_NAME = "rss.push.exchange";
     public static final String LOG_QUEUE = "log.queue";
     public static final String BADGE_QUEUE = "badge.queue";
+    public static final String RSS_PUSH_QUEUE = "rss.push.queue";
 
     // DLQ
     public static final String LOG_DLQ = "log.dlq.queue";
@@ -25,9 +27,13 @@ public class RabbitMqConfig {
 
     @Bean
     public FanoutExchange logExchange() {
-        return new FanoutExchange(EXCHANGE_NAME, true, false);
+        return new FanoutExchange(EVENT_EXCHANGE_NAME, true, false);
     }
 
+    @Bean
+    public FanoutExchange rssPushExchange() {
+        return new FanoutExchange(RSS_EXCHANGE_NAME, true, false);
+    }
 
     // ─── Log Queue ────────────────────────────
 
@@ -45,9 +51,25 @@ public class RabbitMqConfig {
     }
 
     @Bean
-    public Binding logBinding(FanoutExchange logExchange, Queue logQueue) {
+    public Binding logUserEventBinding(FanoutExchange logExchange, Queue logQueue) {
         return BindingBuilder.bind(logQueue).to(logExchange);
     }
+
+    @Bean
+    public Binding logRssPushEventBinding(FanoutExchange rssPushExchange, Queue logQueue) {
+        return BindingBuilder.bind(logQueue).to(rssPushExchange);
+    }
+
+    // ─── RSS Push Queue ───────────────────────
+
+    @Bean Queue rssPushQueue() {
+        return new Queue(RSS_PUSH_QUEUE, true);
+    }
+
+    @Bean Binding rssPushBinding(FanoutExchange rssPushExchange, Queue rssPushQueue) {
+        return BindingBuilder.bind(rssPushQueue).to(rssPushExchange);
+    }
+
 
     // ─── Badge Queue ──────────────────────────
 

@@ -37,7 +37,7 @@ public class MessageParser {
             return new ParsedMessage("Help Command", "This is help information.", List.of(params));
         } else {
             // 对于其他未知命令，可以返回特定的处理或消息
-            return new ParsedMessage("Unknown Command", "Command not recognized: " + command, List.of(params));
+            return new ParsedMessage("news", "Command not recognized: " + command, List.of(params));
         }
     }
 }

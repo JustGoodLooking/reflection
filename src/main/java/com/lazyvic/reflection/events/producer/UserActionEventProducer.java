@@ -16,7 +16,7 @@ public class UserActionEventProducer {
     }
 
     public void send(UserActionEvent event) {
-        rabbitTemplate.convertAndSend(RabbitMqConfig.EXCHANGE_NAME, "", event);
+        rabbitTemplate.convertAndSend(RabbitMqConfig.EVENT_EXCHANGE_NAME, "", event);
         System.out.println("Sent event to MQ: " + event);
     }
 }

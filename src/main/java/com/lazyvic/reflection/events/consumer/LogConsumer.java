@@ -21,11 +21,11 @@ public class LogConsumer {
 
 
     @RabbitListener(queues = RabbitMqConfig.LOG_QUEUE, ackMode = "MANUAL")
-    public void handleUserAction(UserActionEvent event, Channel channel, Message message) throws RuntimeException, IOException {
+    public void handleEventAction(UserActionEvent event, Channel channel, Message message) throws RuntimeException, IOException {
         long deliveryTag = message.getMessageProperties().getDeliveryTag();
         String traceId = event.getTraceId();
         String messageText = event.getMessageText();
-        log.info("Receive event traceId={} | message={}", traceId, messageText);
+        log.info("Receive user event traceId={} | message={}", traceId, messageText);
         try {
             if (messageText.toLowerCase().contains("boom")) {
                 throw new RuntimeException("Boom triggered for traceId=" + traceId);
@@ -53,6 +53,27 @@ public class LogConsumer {
 
     }
 
+//    @RabbitListener(queues = RabbitMqConfig.LOG_QUEUE, ackMode = "MANUAL")
+//    public void handleRssAction(RssPushEvent event, Channel channel, Message message) throws RuntimeException, IOException {
+//        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+//        String traceId = event.getTraceId();
+//        String messageText = event.getLink();
+//        log.info("Receive rss push event traceId={} | message={}", traceId, messageText);
+//        try {
+//            doPushLog(event);
+//
+//            channel.basicAck(deliveryTag, false);
+//            log.info("Ack success traceId={}", traceId);
+//
+//        } catch (Exception e) {
+//            log.warn("Retry limit reached for traceId={}，no longer requeuing", traceId);
+//            retryCountMap.remove(traceId);
+//            channel.basicNack(deliveryTag, false, false); // 不再重送
+//
+//        }
+//
+//    }
+
     private void doLog(UserActionEvent event) {
         log.info("[traceId={}] [LogConsumer] userId={} | action={} | message=\"{}\" | timestamp={}",
                 event.getTraceId(),
@@ -62,4 +83,13 @@ public class LogConsumer {
                 event.getTimestamp()
         );
     }
+
+//    private void doPushLog(RssPushEvent event) {
+//        log.info("[traceId={}] [LogConsumer] userId={} | link={}",
+//                event.getTraceId(),
+//                event.getUserId(),
+//                event.getLink()
+//        );
+//    }
+
 }

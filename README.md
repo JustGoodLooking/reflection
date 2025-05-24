@@ -21,23 +21,20 @@ A personal Telegram bot built with Spring Boot, PostgreSQL, Redis, and Docker to
 - **Backend**: Spring Boot (Java)
 - **Database**: PostgreSQL
 - **Cache / Rate Limiting**: Redis
-- **Queue**: RabbitMQ (for decoupling logs / messages)
-- **Infrastructure**: Docker + Docker Compose
-- **Monitoring**: Prometheus / Grafana (future)
+- **Queue / Async**: RabbitMQ
+- **Infrastructure / Deployment**: Docker, GitHub Actions, (Railway / AWS EC2)
+- **Monitoring (optional)**: Prometheus, Grafana, AWS CloudWatch
 
 ## 🛣️ System Design Roadmap
 
 This project grows by design — each phase adds real-world architecture layers. The focus is not just features, but **how to build them well**.
 
-| Phase | Goal | Tech Stack | Redis Usage | Redis Tips |
-|-------|------|------------|--------------|------------|
+| Phase       | Goal | Tech Stack | Redis Usage | Redis Tips |
+|-------------|------|------------|--------------|------------|
 | **Phase 1** | Basic CRUD: Telegram → Spring → PostgreSQL | Spring Boot, PostgreSQL | Not used | Keep it simple for MVP debugging |
 | **Phase 2** | Daily reminders | `@Scheduled` + DB query | `reminder:userId:2025-05-12` for deduplication | Use `SET NX EX` to prevent duplicates |
 | **Phase 3** | Cache + Rate limiting | Redis TTL, ZSet, counter | `dailyPlan:userId:date`, `user:{id}:cmd_count` | Consider warm-up cache; fallback on limit fail |
-| **Phase 3.5** | Async message processing | RabbitMQ + JSON tasks | Optional: use Redis for locking / tracking | Add idempotent check in consumer |
-| **Phase 4** | Multi-step user input | Redis + simple FSM | `user:123:step`, `user:123:data` | Handle TTL expiry gracefully |
-| **Phase 5** | Async logging system | RabbitMQ → MongoDB (or file) | Redis as temp buffer `logs:tmp:{timestamp}` | Set TTL, Redis not for permanent logs |
-| **Phase 6** | Observability (metrics, health) | Prometheus + Grafana | HINCRBY for `metrics:user:actions` | Prune metrics; use sampling if needed |
-| **Phase 7** | Cloud deploy & CI/CD | GitHub Actions, EC2, RDS | Track build/deploy status via Redis | Set short TTL to avoid stale data |
+| **Phase 4** | Async message processing | RabbitMQ + JSON tasks | Optional: use Redis for locking / tracking | Add idempotent check in consumer |
+| **Phase 5** | Cloud deploy & CI/CD | GitHub Actions, EC2, RDS | Track build/deploy status via Redis | Set short TTL to avoid stale data |
 
 Each phase simulates real backend design decisions: queueing, deduplication, session state, logging separation, etc.

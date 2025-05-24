@@ -1,13 +1,19 @@
 package com.lazyvic.reflection.telegrambot;
 
+import com.lazyvic.reflection.dto.BotNewsResponse;
 import com.lazyvic.reflection.dto.DailyPlanDto;
 import com.lazyvic.reflection.dto.UpdateCallbackQueryDto;
 import com.lazyvic.reflection.dto.UpdateMessageDto;
+import com.lazyvic.reflection.events.model.RssPushEvent;
 import com.lazyvic.reflection.events.model.UserActionEvent;
+import com.lazyvic.reflection.events.producer.RssPushEventProducer;
 import com.lazyvic.reflection.events.producer.UserActionEventProducer;
 import com.lazyvic.reflection.model.DailyPlan;
+import com.lazyvic.reflection.model.NewsItem;
 import com.lazyvic.reflection.repository.DailyPlanRepository;
 import com.lazyvic.reflection.service.DailyPlanService;
+import com.lazyvic.reflection.service.NewsRecommendationService;
+import com.lazyvic.reflection.service.RssParserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -33,13 +39,22 @@ public class RefectionBot extends TelegramLongPollingBot {
     private DailyPlanService dailyPlanService;
     private final DailyPlanRepository dailyPlanRepository;
     private UserActionEventProducer userActionEventProducer;
+    private final RssParserService rssParserService;
+    private final NewsRecommendationService newsRecommendationService;
+    private final RssPushEventProducer rssPushEventProducer;
 
     public RefectionBot(DailyPlanService dailyPlanService,
                         DailyPlanRepository dailyPlanRepository,
-                        UserActionEventProducer userActionEventProducer) {
+                        UserActionEventProducer userActionEventProducer,
+                        RssParserService rssParserService,
+                        NewsRecommendationService newsRecommendationService,
+                        RssPushEventProducer rssPushEventProducer) {
         this.dailyPlanService = dailyPlanService;
         this.dailyPlanRepository = dailyPlanRepository;
         this.userActionEventProducer = userActionEventProducer;
+        this.rssParserService = rssParserService;
+        this.newsRecommendationService = newsRecommendationService;
+        this.rssPushEventProducer = rssPushEventProducer;
     }
 
 
@@ -71,10 +86,17 @@ public class RefectionBot extends TelegramLongPollingBot {
         UpdateMessageDto updateMessageDto = UpdateMessageDto.convert(update);
         List<String> params = updateMessageDto.parseMessage().getParameters();
 
+        if(updateMessageDto.parseMessage().getTitle().equals("news")) {
+            handleNewsFeed(updateMessageDto);
+            return;
+        }
+
         if (params.stream().anyMatch(param -> param.equalsIgnoreCase("year"))) {
             handleYearLogic(updateMessageDto);
             return;
         }
+
+
         boolean handleDailyLogicResult = handleDailyLogic(updateMessageDto);
         if (handleDailyLogicResult) {
             publishUserActionEvent(updateMessageDto);
@@ -112,6 +134,39 @@ public class RefectionBot extends TelegramLongPollingBot {
     private boolean handleDailyLogic(UpdateMessageDto updateMessageDto) {
         DailyPlanDto dailyPlanDto = DailyPlanDto.convert(updateMessageDto);
         return dailyPlanService.trySaveUserPlan(dailyPlanDto);
+
+    }
+
+    private void handleNewsFeed(UpdateMessageDto updateMessageDto) {
+
+
+        BotNewsResponse response = newsRecommendationService.fetchNews(updateMessageDto);
+
+
+        if (response.isCooldown()) {
+            sendMessageToUser(updateMessageDto.getChatId(), response.getMessage());
+            return;
+        }
+
+        if (response.newsItemList.isEmpty()) {
+            sendMessageToUser(updateMessageDto.getChatId(), response.getMessage());
+            return;
+        }
+
+
+
+        List<RssPushEvent> events = response.getNewsItemList().stream()
+                .map(item -> item.toPushEvent(updateMessageDto.getChatId(), item))
+                .toList();
+
+
+        rssPushEventProducer.send(events);
+
+
+//        newsItemList.stream()
+//                .map(NewsItem::getLink)
+//                .limit(3)
+//                .forEach(msg -> sendMessageToUser(updateMessageDto.getChatId(), msg));
 
     }
 
