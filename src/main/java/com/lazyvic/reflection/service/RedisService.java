@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -80,4 +84,24 @@ public class RedisService {
     }
 
 
+
+    // check list
+
+
+    public List<String> getList(String key) {
+        return redisTemplate.opsForList().range(key, 0, -1);
+    }
+
+    public void setList(String key, List<String> values) {
+        redisTemplate.delete(key);
+        for (String value : values) {
+            redisTemplate.opsForList().rightPush(key, value);
+        }
+    }
+
+    public void setExpireAtMidnight(String key) {
+        LocalDateTime midnight = LocalDate.now().plusDays(1).atStartOfDay();
+        Date expireAt = Date.from(midnight.atZone(ZoneId.systemDefault()).toInstant());
+        redisTemplate.expireAt(key, expireAt);
+    }
 }

@@ -25,9 +25,9 @@ public class TelegramBotInitializer {
 
     @EventListener({ContextRefreshedEvent.class})
     public void init() {
-
         List<BotCommand> commands = List.of(
-                new BotCommand("/news", "看最新新聞")
+                new BotCommand("/news", "看最新新聞"),
+                new BotCommand("/checklist", "checklist")
         );
         try {
             TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);

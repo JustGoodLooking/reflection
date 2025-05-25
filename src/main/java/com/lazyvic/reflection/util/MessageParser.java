@@ -32,12 +32,12 @@ public class MessageParser {
         String command = textMessage.split(" ")[0];
         String params = textMessage.length() > command.length() ? textMessage.substring(command.length()).trim() : "";
 
-        // 处理未知命令
-        if (command.equals("/help")) {
-            return new ParsedMessage("Help Command", "This is help information.", List.of(params));
-        } else {
-            // 对于其他未知命令，可以返回特定的处理或消息
+        if (command.equals("/checklist")) {
+            return new ParsedMessage("checklist", "Command not recognized: " + command, List.of(params));
+        } else if (command.equals("/news")) {
             return new ParsedMessage("news", "Command not recognized: " + command, List.of(params));
+        } else {
+            return new ParsedMessage("Help Command", "This is help information.", List.of(params));
         }
     }
 }

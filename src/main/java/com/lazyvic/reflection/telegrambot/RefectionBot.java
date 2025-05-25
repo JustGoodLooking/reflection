@@ -9,8 +9,8 @@ import com.lazyvic.reflection.events.model.UserActionEvent;
 import com.lazyvic.reflection.events.producer.RssPushEventProducer;
 import com.lazyvic.reflection.events.producer.UserActionEventProducer;
 import com.lazyvic.reflection.model.DailyPlan;
-import com.lazyvic.reflection.model.NewsItem;
 import com.lazyvic.reflection.repository.DailyPlanRepository;
+import com.lazyvic.reflection.service.ChecklistService;
 import com.lazyvic.reflection.service.DailyPlanService;
 import com.lazyvic.reflection.service.NewsRecommendationService;
 import com.lazyvic.reflection.service.RssParserService;
@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -42,19 +43,22 @@ public class RefectionBot extends TelegramLongPollingBot {
     private final RssParserService rssParserService;
     private final NewsRecommendationService newsRecommendationService;
     private final RssPushEventProducer rssPushEventProducer;
+    private final ChecklistService checklistService;
 
     public RefectionBot(DailyPlanService dailyPlanService,
                         DailyPlanRepository dailyPlanRepository,
                         UserActionEventProducer userActionEventProducer,
                         RssParserService rssParserService,
                         NewsRecommendationService newsRecommendationService,
-                        RssPushEventProducer rssPushEventProducer) {
+                        RssPushEventProducer rssPushEventProducer,
+                        ChecklistService checklistService) {
         this.dailyPlanService = dailyPlanService;
         this.dailyPlanRepository = dailyPlanRepository;
         this.userActionEventProducer = userActionEventProducer;
         this.rssParserService = rssParserService;
         this.newsRecommendationService = newsRecommendationService;
         this.rssPushEventProducer = rssPushEventProducer;
+        this.checklistService = checklistService;
     }
 
 
@@ -80,14 +84,17 @@ public class RefectionBot extends TelegramLongPollingBot {
         }
     }
 
-
-
     private void handleMessage(Update update) {
         UpdateMessageDto updateMessageDto = UpdateMessageDto.convert(update);
         List<String> params = updateMessageDto.parseMessage().getParameters();
 
         if(updateMessageDto.parseMessage().getTitle().equals("news")) {
             handleNewsFeed(updateMessageDto);
+            return;
+        }
+
+        if (updateMessageDto.parseMessage().getTitle().equals("checklist")) {
+            handleCheckList(updateMessageDto);
             return;
         }
 
@@ -102,9 +109,24 @@ public class RefectionBot extends TelegramLongPollingBot {
             publishUserActionEvent(updateMessageDto);
         }
         replyAddPlan(update, handleDailyLogicResult);
-        
 
 
+
+    }
+
+    private void handleCheckList(UpdateMessageDto updateMessageDto) {
+        List<ChecklistService.Item> items = checklistService.getChecklist(updateMessageDto.getChatId());
+        String text = checklistService.renderText(items);
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+        for (ChecklistService.Item item : items) {
+            InlineKeyboardButton btn = new InlineKeyboardButton();
+            btn.setText((item.done() ? "✅" : "⬜") + " " + item.text());
+            btn.setCallbackData("toggle:" + item.id());
+            buttons.add(List.of(btn));
+        }
+        markup.setKeyboard(buttons);
+        sendMessageToUser(updateMessageDto.getChatId(), text, markup);
     }
 
     private void publishUserActionEvent(UpdateMessageDto updateMessageDto) {
@@ -118,6 +140,11 @@ public class RefectionBot extends TelegramLongPollingBot {
 
     private void handleCallbackQuery(Update update) {
         UpdateCallbackQueryDto updateCallbackQueryDto = UpdateCallbackQueryDto.convert(update);
+        if (updateCallbackQueryDto.getCallbackData().startsWith("toggle:")) {
+            checkList(updateCallbackQueryDto);
+            return;
+        }
+
         Long userTelegramId = updateCallbackQueryDto.getUserId();
         List<DailyPlan> dailyPlans = dailyPlanService.getUserDailyPlansByJPQL(userTelegramId);
 
@@ -127,6 +154,57 @@ public class RefectionBot extends TelegramLongPollingBot {
         replyDailyPlan(update, formatDailyPlansForTelegram);
     }
 
+    private void checkList(UpdateCallbackQueryDto updateCallbackQueryDto) {
+        String data = updateCallbackQueryDto.getCallbackData();
+        Long userId = updateCallbackQueryDto.getUserId();
+        Integer messageId = updateCallbackQueryDto.getMessageId();
+        Long chatId = updateCallbackQueryDto.getChatId();
+        int id = Integer.parseInt(data.split(":" )[1]);
+        checklistService.toggleItem(userId, id);
+        List<ChecklistService.Item> items = checklistService.getChecklist(userId);
+
+        boolean allDone = items.stream().allMatch(ChecklistService.Item::done);
+        if (allDone) {
+            checklistService.resetChecklist(userId);
+            editMessageText(chatId, messageId, "✅ Checklist 完成！已自動重置。", null);
+        } else {
+            String newText = checklistService.renderText(items);
+            InlineKeyboardMarkup markup = buildNewMarkup(items);
+            editMessageText(chatId, messageId, newText, markup);
+        }
+    }
+
+    public void editMessageText(Long chatId, Integer messageId, String newText, InlineKeyboardMarkup markup)  {
+        EditMessageText editMessage = new EditMessageText();
+        editMessage.setChatId(chatId.toString());
+        editMessage.setMessageId(messageId);
+        editMessage.setText(newText);
+        editMessage.setReplyMarkup(markup);
+        editMessage.setParseMode("HTML");
+
+        try {
+            execute(editMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+    public InlineKeyboardMarkup buildNewMarkup(List<ChecklistService.Item> items) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+        for (ChecklistService.Item item : items) {
+            InlineKeyboardButton btn = new InlineKeyboardButton();
+            btn.setText((item.done() ? "✅" : "⬜") + " " + item.text());
+            btn.setCallbackData("toggle:" + item.id());
+            buttons.add(List.of(btn));
+        }
+        markup.setKeyboard(buttons);
+        return markup;
+    }
+
+
     private void handleYearLogic(UpdateMessageDto updateMessageDto) {
         System.out.println("save year plan");
     }
@@ -134,12 +212,9 @@ public class RefectionBot extends TelegramLongPollingBot {
     private boolean handleDailyLogic(UpdateMessageDto updateMessageDto) {
         DailyPlanDto dailyPlanDto = DailyPlanDto.convert(updateMessageDto);
         return dailyPlanService.trySaveUserPlan(dailyPlanDto);
-
     }
 
     private void handleNewsFeed(UpdateMessageDto updateMessageDto) {
-
-
         BotNewsResponse response = newsRecommendationService.fetchNews(updateMessageDto);
 
 
@@ -152,8 +227,6 @@ public class RefectionBot extends TelegramLongPollingBot {
             sendMessageToUser(updateMessageDto.getChatId(), response.getMessage());
             return;
         }
-
-
 
         List<RssPushEvent> events = response.getNewsItemList().stream()
                 .map(item -> item.toPushEvent(updateMessageDto.getChatId(), item))
@@ -242,9 +315,24 @@ public class RefectionBot extends TelegramLongPollingBot {
     }
 
     public void sendMessageToUser(Long chatId, String message) {
+        sendMessageToUser(chatId, message, null);
+//        SendMessage sendMessage = new SendMessage();
+//        sendMessage.setChatId(chatId.toString());
+//        sendMessage.setText(message);
+//        try {
+//            execute(sendMessage);
+//        } catch (TelegramApiException e) {
+//            e.printStackTrace();
+//        }
+    }
+
+    public void sendMessageToUser(Long chatId, String message, InlineKeyboardMarkup markup) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId.toString());
         sendMessage.setText(message);
+        if (markup != null) {
+            sendMessage.setReplyMarkup(markup);
+        }
         try {
             execute(sendMessage);
         } catch (TelegramApiException e) {
