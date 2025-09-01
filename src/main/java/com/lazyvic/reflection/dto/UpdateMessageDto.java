@@ -15,6 +15,8 @@ public class UpdateMessageDto {
     private String chatType;
     private LocalDateTime messageTime;
 
+    private ParsedMessage cached;
+
     public UpdateMessageDto(Update update) {
         this.userId = update.getMessage().getFrom().getId();
         this.userName = update.getMessage().getFrom().getFirstName();
@@ -53,8 +55,16 @@ public class UpdateMessageDto {
     }
 
     public ParsedMessage parseMessage() {
-        MessageParser parser = new MessageParser(textMessage);
-        return parser.parse();
+        if (cached == null) {
+            MessageParser parser = new MessageParser(textMessage);
+            cached = parser.parse();
+        }
+        return cached;
     }
+
+//    public ParsedMessage parseMessage() {
+//        MessageParser parser = new MessageParser(textMessage);
+//        return parser.parse();
+//    }
 
 }

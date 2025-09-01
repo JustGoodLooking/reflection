@@ -14,6 +14,7 @@ import com.lazyvic.reflection.service.ChecklistService;
 import com.lazyvic.reflection.service.DailyPlanService;
 import com.lazyvic.reflection.service.NewsRecommendationService;
 import com.lazyvic.reflection.service.RssParserService;
+import com.lazyvic.reflection.util.ParsedMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -86,32 +87,42 @@ public class RefectionBot extends TelegramLongPollingBot {
 
     private void handleMessage(Update update) {
         UpdateMessageDto updateMessageDto = UpdateMessageDto.convert(update);
+        ParsedMessage parsed = updateMessageDto.parseMessage();
+
+        String command = parsed.getTitle();
+        List<String> params = parsed.getParameters();
+
+
+        switch (command) {
+            case "news" -> handleNewsFeed(updateMessageDto);
+            case "checklist" -> handleCheckList(updateMessageDto);
+            case "shortURL" -> handleShortUrl(updateMessageDto);
+            default -> handleUnknown(updateMessageDto);
+        }
+
+//        if (params.stream().anyMatch(param -> param.equalsIgnoreCase("year"))) {
+//            handleYearLogic(updateMessageDto);
+//            return;
+//        }
+//
+//
+//        boolean handleDailyLogicResult = handleDailyLogic(updateMessageDto);
+//        if (handleDailyLogicResult) {
+//            publishUserActionEvent(updateMessageDto);
+//        }
+//        replyAddPlan(update, handleDailyLogicResult);
+
+
+
+    }
+
+    private void handleUnknown(UpdateMessageDto updateMessageDto) {
+
+    }
+
+    private void handleShortUrl(UpdateMessageDto updateMessageDto) {
+        // valid parameter
         List<String> params = updateMessageDto.parseMessage().getParameters();
-
-        if(updateMessageDto.parseMessage().getTitle().equals("news")) {
-            handleNewsFeed(updateMessageDto);
-            return;
-        }
-
-        if (updateMessageDto.parseMessage().getTitle().equals("checklist")) {
-            handleCheckList(updateMessageDto);
-            return;
-        }
-
-        if (params.stream().anyMatch(param -> param.equalsIgnoreCase("year"))) {
-            handleYearLogic(updateMessageDto);
-            return;
-        }
-
-
-        boolean handleDailyLogicResult = handleDailyLogic(updateMessageDto);
-        if (handleDailyLogicResult) {
-            publishUserActionEvent(updateMessageDto);
-        }
-        replyAddPlan(update, handleDailyLogicResult);
-
-
-
     }
 
     private void handleCheckList(UpdateMessageDto updateMessageDto) {

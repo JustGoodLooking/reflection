@@ -57,11 +57,12 @@ public class ChecklistService {
     }
 
     public String renderText(List<Item> items) {
-        StringBuilder sb = new StringBuilder("\uD83E\uDDF3 出門前 Checklist:\n\n");
-        for (Item item : items) {
-            sb.append(item.render()).append("\n");
-        }
-        return sb.toString();
+//        StringBuilder sb = new StringBuilder("\uD83E\uDDF3 出門前 Checklist:\n\n");
+//        for (Item item : items) {
+//            sb.append(item.render()).append("\n");
+//        }
+//        return sb.toString();
+        return "🧾 請點選完成項目：";
     }
 
     private String serialize(Item item) {
